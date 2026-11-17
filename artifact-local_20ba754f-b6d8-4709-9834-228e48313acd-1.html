@@ -1,0 +1,1062 @@
+
+                        <!DOCTYPE html>
+                        <html lang="en">
+                        <head>
+                            <meta charset="UTF-8">
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+							<style>
+								body {
+									background-color: white; /* Ensure the iframe has a white background */
+								}
+
+								
+							</style>
+                        </head>
+                        <body>
+                            <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Choi Hung Estate Development Timeline</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #1a1a2e;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff;
+            overflow: hidden;
+        }
+        h1 {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+            color: #f0a500;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+        #gameCanvas {
+            border: 3px solid #333;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+        .controls {
+            margin-top: 15px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        button {
+            background: #f0a500;
+            color: #1a1a2e;
+            border: none;
+            padding: 10px 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        button:hover {
+            background: #ffcc02;
+        }
+        #yearDisplay {
+            font-size: 1.1em;
+            color: #f0a500;
+            min-width: 280px;
+            text-align: center;
+        }
+        #description {
+            margin-top: 10px;
+            font-size: 0.8em;
+            color: #aaa;
+            text-align: center;
+            max-width: 700px;
+            min-height: 40px;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+    <h1>🏘️ Choi Hung Estate Timeline 🌈</h1>
+    <canvas id="gameCanvas" width="750" height="480"></canvas>
+    <div class="controls">
+        <button id="prevBtn">◀ Prev</button>
+        <span id="yearDisplay"></span>
+        <button id="nextBtn">Next ▶</button>
+        <button id="autoBtn">▶ Auto Play</button>
+    </div>
+    <div id="description"></div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const P = 4;
+        const W = canvas.width;
+        const H = canvas.height;
+
+        let currentPhase = 0;
+        let animFrame = 0;
+        let transitioning = false;
+        let transitionProgress = 0;
+        let autoPlay = false;
+        let autoTimer = null;
+
+        const phases = [
+            {
+                year: "1958–1960",
+                title: "Site Preparation",
+                desc: "Former farmland is cleared and site preparation begins after plans are approved. Earthmoving equipment and cranes arrive to reshape the hillside terrain in Wong Tai Sin."
+            },
+            {
+                year: "1961–1963",
+                title: "Construction & First Residents",
+                desc: "Tower blocks, schools, markets, and the rooftop car park rise together with scaffolding. The first residents move in by 1962, followed by the official opening ceremony in December 1963."
+            },
+            {
+                year: "1964–1965",
+                title: "Fully Completed & Award",
+                desc: "All 11 rainbow-colored blocks are fully completed and occupied, culminating in the estate winning the Hong Kong Institute of Architects Silver Medal in 1965."
+            },
+            {
+                year: "1970s",
+                title: "Thriving Community",
+                desc: "Thriving self-contained community life flourishes around the built-in schools, wet markets, and local shops. Over 43,000 residents call Choi Hung home."
+            },
+            {
+                year: "1980s",
+                title: "Mature Estate & Basketball Court",
+                desc: "The estate's greenery matures around the iconic rooftop rainbow basketball court and bustling neighborhood spaces."
+            },
+            {
+                year: "1990s–2000s",
+                title: "Renovation & Repainting",
+                desc: "Cyclical renovations and major repainting take place with bamboo scaffolding and green safety netting on select buildings."
+            },
+            {
+                year: "2010s",
+                title: "Instagram Famous",
+                desc: "The estate enters its Instagram-famous era, drawing crowds of tourists, phones, and cameras to the iconic rainbow basketball court and colorful facades."
+            },
+            {
+                year: "2020s – Now",
+                title: "Heritage Landmark",
+                desc: "Celebrated as a beloved heritage landmark of everyday Hong Kong life — hanging laundry, old-school cafes — following the announcement of its phased redevelopment starting in 2028."
+            }
+        ];
+
+        // ===== DRAWING UTILITIES =====
+        function px(x, y, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(Math.round(x / P) * P, Math.round(y / P) * P, P, P);
+        }
+
+        function pxRect(x, y, w, h, color) {
+            ctx.fillStyle = color;
+            const sx = Math.round(x / P) * P;
+            const sy = Math.round(y / P) * P;
+            const sw = Math.round(w / P) * P;
+            const sh = Math.round(h / P) * P;
+            ctx.fillRect(sx, sy, sw, sh);
+        }
+
+        function shade(color, amt) {
+            let r = parseInt(color.slice(1, 3), 16) + amt;
+            let g = parseInt(color.slice(3, 5), 16) + amt;
+            let b = parseInt(color.slice(5, 7), 16) + amt;
+            r = Math.max(0, Math.min(255, r));
+            g = Math.max(0, Math.min(255, g));
+            b = Math.max(0, Math.min(255, b));
+            return `rgb(${r},${g},${b})`;
+        }
+
+        function lerpColor(c1, c2, t) {
+            const r1 = parseInt(c1.slice(1, 3), 16), g1 = parseInt(c1.slice(3, 5), 16), b1 = parseInt(c1.slice(5, 7), 16);
+            const r2 = parseInt(c2.slice(1, 3), 16), g2 = parseInt(c2.slice(3, 5), 16), b2 = parseInt(c2.slice(5, 7), 16);
+            const r = Math.round(r1 + (r2 - r1) * t);
+            const g = Math.round(g1 + (g2 - g1) * t);
+            const b = Math.round(b1 + (b2 - b1) * t);
+            return `rgb(${r},${g},${b})`;
+        }
+
+        // ===== SKY & ENVIRONMENT =====
+        function drawSky(topColor, botColor) {
+            for (let y = 0; y < 290; y += P) {
+                const t = y / 290;
+                ctx.fillStyle = lerpColor(topColor, botColor, t);
+                pxRect(0, y, W, P, lerpColor(topColor, botColor, t));
+            }
+        }
+
+        function drawClouds() {
+            const drawCloud = (cx, cy, s) => {
+                const offsets = [
+                    [0,0],[1,0],[2,0],[3,0],[4,0],
+                    [-1,-1],[0,-1],[1,-1],[2,-1],[3,-1],[4,-1],[5,-1],
+                    [0,-2],[1,-2],[2,-2],[3,-2],[4,-2],
+                    [1,-3],[2,-3],[3,-3]
+                ];
+                offsets.forEach(([ox, oy]) => {
+                    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+                    ctx.fillRect(Math.round((cx + ox * s) / P) * P, Math.round((cy + oy * s) / P) * P, P * Math.ceil(s / P), P * Math.ceil(s / P));
+                });
+            };
+            const offset = (animFrame * 0.3) % (W + 200);
+            drawCloud((30 + offset) % (W + 100) - 50, 35, 5);
+            drawCloud((280 + offset * 0.6) % (W + 100) - 50, 55, 4);
+            drawCloud((500 + offset * 0.4) % (W + 100) - 50, 25, 5);
+            drawCloud((650 + offset * 0.7) % (W + 100) - 50, 65, 4);
+        }
+
+        function drawHills() {
+            for (let x = 0; x < W; x += P) {
+                const hillH = Math.sin(x * 0.006) * 20 + Math.sin(x * 0.013) * 12 + 35;
+                for (let y = 300 - hillH; y < 300; y += P) {
+                    ctx.fillStyle = Math.random() > 0.6 ? '#4A7A3A' : '#5A8A4A';
+                    ctx.fillRect(x, y, P, P);
+                }
+            }
+        }
+
+        function drawGround(color) {
+            pxRect(0, 300, W, P * 2, '#777766');
+            pxRect(0, 308, W, H - 308, color);
+        }
+
+        // ===== CHOI HUNG STYLE BUILDING =====
+        // The key visual: cream/beige frame grid with colorful panel infills,
+        // like the photo — a grid of rectangular colored panels on a beige structure
+        // with a central red/orange lattice column
+
+        const panelColorRows = [
+            // top rows: lavender, pink, light blue
+            ['#C4B0D4', '#D4A0C0', '#A0CDE8', '#C4B0D4', '#D4A0C0', '#A0CDE8', '#C4B0D4'],
+            ['#A0CDE8', '#C4B0D4', '#A0CDE8', '#C4B0D4', '#A0CDE8', '#C4B0D4', '#A0CDE8'],
+            // middle rows: blue, green, cyan
+            ['#80C0E0', '#A0CDE8', '#80C0E0', '#90D8A0', '#80C0E0', '#A0CDE8', '#80C0E0'],
+            ['#90D8A0', '#80C0E0', '#90D8A0', '#80C0E0', '#90D8A0', '#80C0E0', '#90D8A0'],
+            ['#A0E8B0', '#90D8A0', '#A0E8B0', '#90D8A0', '#A0E8B0', '#90D8A0', '#A0E8B0'],
+            // lower rows: green, yellow
+            ['#C8E060', '#A0E8B0', '#D8E840', '#C8E060', '#A0E8B0', '#C8E060', '#A0E8B0'],
+            ['#E8E040', '#D8D830', '#E8E040', '#D8D830', '#E8E040', '#D8D830', '#E8E040'],
+            // bottom rows: yellow, orange
+            ['#E8C840', '#E8A830', '#E8C840', '#E8A830', '#E8C840', '#E8A830', '#E8C840'],
+            ['#E89830', '#E88020', '#E89830', '#E88020', '#E89830', '#E88020', '#E89830'],
+        ];
+
+        function drawChoiHungBuilding(bx, by, bw, bh, buildProgress, showLaundry, showScaffold) {
+            const actualH = bh * Math.min(1, buildProgress);
+            const actualY = by + bh - actualH;
+
+            const frameColor = '#E8DCC8'; // cream beige
+            const frameDark = '#C8B8A0';
+            const roofColor = '#D8D0C0';
+
+            // Main building body
+            pxRect(bx, actualY, bw, actualH, frameColor);
+
+            // Roof band
+            pxRect(bx, actualY, bw, P * 3, roofColor);
+            // Roof structure on top center
+            pxRect(bx + bw / 2 - 12, actualY - P * 4, 24, P * 4, '#D0C8B8');
+            pxRect(bx + bw / 2 - 8, actualY - P * 6, 16, P * 2, '#C8C0B0');
+
+            if (buildProgress < 0.5) return; // too early for details
+
+            // Grid of colored panels
+            const cols = 7;
+            const rows = panelColorRows.length;
+            const panelW = Math.floor((bw - (cols + 1) * P * 2) / cols / P) * P;
+            const panelH = Math.floor((actualH - P * 8) / rows / P) * P;
+            const gridStartX = bx + P * 2;
+            const gridStartY = actualY + P * 5;
+            const gapX = P * 2;
+            const gapY = P * 2;
+
+            // Central orange/red lattice column
+            const centerCol = Math.floor(cols / 2);
+            const centerX = gridStartX + centerCol * (panelW + gapX);
+
+            for (let row = 0; row < rows; row++) {
+                for (let col = 0; col < cols; col++) {
+                    const panX = gridStartX + col * (panelW + gapX);
+                    const panY = gridStartY + row * (panelH + gapY);
+
+                    if (panY + panelH > by + bh) continue;
+                    if (panY < actualY + P * 4) continue;
+
+                    // Frame lines
+                    pxRect(panX - P, panY - P, panelW + P * 2, P, frameDark);
+                    pxRect(panX - P, panY + panelH, panelW + P * 2, P, frameDark);
+                    pxRect(panX - P, panY, P, panelH, frameDark);
+                    pxRect(panX + panelW, panY, P, panelH, frameDark);
+
+                    if (col === centerCol) {
+                        // Central red/orange lattice
+                        const latticeColor = row < 3 ? '#E86040' : row < 6 ? '#E07038' : '#D06030';
+                        pxRect(panX, panY, panelW, panelH, latticeColor);
+                        // Lattice pattern
+                        for (let ly = panY; ly < panY + panelH; ly += P * 2) {
+                            for (let lx = panX; lx < panX + panelW; lx += P * 2) {
+                                ctx.fillStyle = shade(latticeColor, -20);
+                                ctx.fillRect(lx, ly, P, P);
+                            }
+                        }
+                    } else {
+                        // Colored panel
+                        const colorIdx = (col + (col > centerCol ? -1 : 0)) % panelColorRows[row].length;
+                        pxRect(panX, panY, panelW, panelH, panelColorRows[row][colorIdx]);
+                    }
+
+                    // Random laundry hanging
+                    if (showLaundry && Math.sin(row * 7 + col * 13 + 5) > 0.3) {
+                        const laundryColors = ['#FFFFFF', '#FF8888', '#8888FF', '#FFFF88', '#FF88FF', '#88FFFF'];
+                        const lc = laundryColors[Math.floor(Math.abs(Math.sin(row * 3 + col * 5)) * laundryColors.length)];
+                        const swing = Math.sin(animFrame * 0.03 + row + col) * 2;
+                        px(panX + panelW + swing, panY + P * 2, lc);
+                        px(panX + panelW + swing, panY + P * 3, lc);
+                    }
+                }
+            }
+
+            // Scaffolding overlay
+            if (showScaffold) {
+                // Bamboo scaffolding: vertical and horizontal poles
+                for (let sy = actualY; sy < by + bh; sy += P * 12) {
+                    // Horizontal bamboo
+                    for (let sx = bx; sx < bx + bw; sx += P) {
+                        ctx.fillStyle = 'rgba(180, 150, 80, 0.7)';
+                        ctx.fillRect(sx, sy, P, P);
+                    }
+                }
+                for (let sx = bx; sx < bx + bw; sx += P * 14) {
+                    for (let sy = actualY; sy < by + bh; sy += P) {
+                        ctx.fillStyle = 'rgba(180, 150, 80, 0.7)';
+                        ctx.fillRect(sx, sy, P, P);
+                    }
+                }
+                // Green safety netting
+                for (let ny = actualY; ny < by + bh; ny += P * 2) {
+                    for (let nx = bx + P * 2; nx < bx + bw - P * 2; nx += P * 2) {
+                        ctx.fillStyle = 'rgba(0, 160, 50, 0.25)';
+                        ctx.fillRect(nx, ny, P, P);
+                    }
+                }
+            }
+        }
+
+        // ===== BASKETBALL COURT (Choi Hung style) =====
+        // The real court: blue outer, then yellow/orange/red center stripes, white lines
+        function drawChoiHungCourt(cx, cy, cw, ch) {
+            // Blue surround
+            pxRect(cx, cy, cw, ch, '#4A90C8');
+
+            // Inner court area
+            const innerX = cx + P * 4;
+            const innerY = cy + P * 3;
+            const innerW = cw - P * 8;
+            const innerH = ch - P * 6;
+
+            // Color zones: left third yellow, center orange/red, right third yellow
+            const thirdW = Math.floor(innerW / 3 / P) * P;
+
+            // Yellow zones
+            pxRect(innerX, innerY, thirdW, innerH, '#E8C830');
+            pxRect(innerX + thirdW * 2, innerY, thirdW, innerH, '#E8C830');
+
+            // Center: orange top, red-orange bottom split
+            pxRect(innerX + thirdW, innerY, thirdW, Math.floor(innerH / 2 / P) * P, '#E88830');
+            pxRect(innerX + thirdW, innerY + Math.floor(innerH / 2 / P) * P, thirdW, innerH - Math.floor(innerH / 2 / P) * P, '#D86028');
+
+            // Court white lines
+            // Center line
+            pxRect(innerX + Math.floor(innerW / 2 / P) * P, innerY, P, innerH, '#FFFFFF');
+            // Center circle
+            const ccx = innerX + Math.floor(innerW / 2 / P) * P;
+            const ccy = innerY + Math.floor(innerH / 2 / P) * P;
+            for (let angle = 0; angle < Math.PI * 2; angle += 0.15) {
+                const r = 12;
+                px(ccx + Math.cos(angle) * r, ccy + Math.sin(angle) * r, '#FFFFFF');
+            }
+            // Outer border line
+            pxRect(innerX, innerY, innerW, P, '#FFFFFF');
+            pxRect(innerX, innerY + innerH - P, innerW, P, '#FFFFFF');
+            pxRect(innerX, innerY, P, innerH, '#FFFFFF');
+            pxRect(innerX + innerW - P, innerY, P, innerH, '#FFFFFF');
+
+            // Three-point arcs (semicircles at each end)
+            for (let angle = -Math.PI / 2; angle <= Math.PI / 2; angle += 0.1) {
+                px(innerX + P * 2 + Math.cos(angle) * 14, ccy + Math.sin(angle) * 14, '#FFFFFF');
+                px(innerX + innerW - P * 2 - Math.cos(angle) * 14, ccy + Math.sin(angle) * 14, '#FFFFFF');
+            }
+
+            // Basketball hoops (blue stands like in photo)
+            // Left hoop
+            pxRect(innerX - P, ccy - P * 4, P * 2, P * 8, '#3070A0');
+            pxRect(innerX - P, ccy - P * 5, P * 4, P, '#3070A0');
+            // Backboard
+            pxRect(innerX + P, ccy - P * 3, P, P * 4, '#FFFFFF');
+            // Rim
+            pxRect(innerX + P * 2, ccy - P, P * 2, P, '#FF6600');
+
+            // Right hoop
+            pxRect(innerX + innerW - P, ccy - P * 4, P * 2, P * 8, '#3070A0');
+            pxRect(innerX + innerW - P * 3, ccy - P * 5, P * 4, P, '#3070A0');
+            pxRect(innerX + innerW - P, ccy - P * 3, P, P * 4, '#FFFFFF');
+            pxRect(innerX + innerW - P * 3, ccy - P, P * 2, P, '#FF6600');
+        }
+
+        // ===== ENVIRONMENT OBJECTS =====
+        function drawPalmTree(x, y, size) {
+            // Trunk
+            for (let i = 0; i < size * 5; i += P) {
+                const sway = Math.sin(animFrame * 0.02 + i * 0.1) * 1;
+                pxRect(x + sway, y - i, P, P, i % (P * 2) === 0 ? '#8B7530' : '#7A6420');
+            }
+            // Fronds
+            const topY = y - size * 5;
+            const topX = x + Math.sin(animFrame * 0.02 + size) * 1;
+            const frondColor1 = '#2E8B2E';
+            const frondColor2 = '#228B22';
+            for (let f = 0; f < 6; f++) {
+                const fAngle = (f / 6) * Math.PI * 2 + animFrame * 0.005;
+                for (let d = 0; d < size * 3; d += P) {
+                    const fx = topX + Math.cos(fAngle) * d * 1.2;
+                    const fy = topY + Math.sin(fAngle) * d * 0.3 + d * 0.3;
+                    px(fx, fy, f % 2 === 0 ? frondColor1 : frondColor2);
+                }
+            }
+        }
+
+        function drawTree(x, y, size) {
+            pxRect(x, y, P, size * 3, '#6B5A14');
+            for (let lx = -size * 2; lx <= size * 2; lx += P) {
+                for (let ly = -size * 2; ly <= size * 1; ly += P) {
+                    if (lx * lx + ly * ly < size * size * 4) {
+                        ctx.fillStyle = Math.random() > 0.5 ? '#228B22' : '#1C7A1C';
+                        ctx.fillRect(Math.round((x + lx) / P) * P, Math.round((y - size * 2 + ly) / P) * P, P, P);
+                    }
+                }
+            }
+        }
+
+        function drawCrane(x, y) {
+            pxRect(x, y, P, 100, '#DDAA22');
+            pxRect(x - 35, y, 70, P, '#DDAA22');
+            pxRect(x - 35, y + P, P, P * 2, '#666666');
+            const swing = Math.sin(animFrame * 0.04) * 5;
+            for (let i = 0; i < 35; i += P) {
+                px(x + 25 + swing, y + i, '#888888');
+            }
+            pxRect(x + 22 + swing, y + 35, P * 3, P * 2, '#AA7733');
+        }
+
+        function drawPeople(x, y, count) {
+            const colors = ['#FF4444', '#4488FF', '#44CC44', '#FF44FF', '#FFFF44', '#44FFFF', '#FF8844', '#8844FF'];
+            for (let i = 0; i < count; i++) {
+                const px2 = x + i * 14 + Math.sin(animFrame * 0.03 + i * 1.7) * 3;
+                const py2 = y + Math.sin(animFrame * 0.04 + i * 2.3) * 1;
+                px(px2, py2 - 8, '#FFCC88');
+                px(px2, py2 - 4, colors[i % colors.length]);
+                px(px2, py2, colors[i % colors.length]);
+            }
+        }
+
+        function drawCamera(x, y) {
+            const bob = Math.sin(animFrame * 0.08) * 2;
+            px(x, y - 10 + bob, '#FFCC88');
+            px(x, y - 6 + bob, '#FF6688');
+            px(x, y - 2 + bob, '#FF6688');
+            pxRect(x + P, y - 8 + bob, P * 2, P, '#333333');
+            if (animFrame % 50 < 4) {
+                px(x + P * 3, y - 10 + bob, '#FFFFFF');
+            }
+        }
+
+        function drawPhone(x, y) {
+            const bob = Math.sin(animFrame * 0.07 + 1.5) * 2;
+            px(x, y - 10 + bob, '#FFCC88');
+            px(x, y - 6 + bob, '#4488FF');
+            px(x, y - 2 + bob, '#4488FF');
+            pxRect(x - P, y - 14 + bob, P, P * 2, '#222222');
+            px(x - P, y - 14 + bob, '#66CCFF');
+        }
+
+        function drawMarketStall(x, y) {
+            pxRect(x - 4, y - 16, 32, P * 2, '#CC4444');
+            pxRect(x, y - 16, P, 16, '#886644');
+            pxRect(x + 24, y - 16, P, 16, '#886644');
+            pxRect(x, y - 4, 28, P * 2, '#AA8855');
+            const goods = ['#FF2200', '#00CC00', '#FFAA00', '#FF6600'];
+            for (let i = 0; i < 4; i++) {
+                px(x + 4 + i * 6, y - 8, goods[i]);
+            }
+        }
+
+        function drawSchool(x, y, w, h) {
+            pxRect(x, y, w, h, '#D4C4A8');
+            pxRect(x, y - P * 2, w, P * 2, '#AA4444');
+            for (let i = 0; i < 3; i++) {
+                pxRect(x + 6 + i * 14, y + 6, P * 2, P * 2, '#88CCFF');
+            }
+            pxRect(x + w / 2 - P, y + h - 12, P * 3, 12, '#664422');
+        }
+
+        // ===== PHASE DRAWING =====
+
+        // Building layout config: show ~3 visible buildings in a curved row
+        // mimicking the U-shaped arrangement surrounding the court
+
+        function drawEstateBuildings(buildProgress, showLaundry, showScaffold, scaffoldIndices) {
+            // Left wing
+            drawChoiHungBuilding(20, 80, 200, 220, buildProgress, showLaundry,
+                showScaffold && scaffoldIndices.includes(0));
+            // Center/back (taller)
+            drawChoiHungBuilding(240, 60, 220, 240, buildProgress, showLaundry,
+                showScaffold && scaffoldIndices.includes(1));
+            // Right wing
+            drawChoiHungBuilding(480, 80, 200, 220, buildProgress, showLaundry,
+                showScaffold && scaffoldIndices.includes(2));
+        }
+
+        function drawPhase0() {
+            // 1958-1960: Site prep on farmland
+            drawSky('#A8D8F0', '#78B8E0');
+            
+            // Bare brown hills (no green yet — farmland cleared)
+            for (let x = 0; x < W; x += P) {
+                const hillH = Math.sin(x * 0.006) * 25 + Math.sin(x * 0.013) * 15 + 45;
+                for (let y = 300 - hillH; y < 300; y += P) {
+                    ctx.fillStyle = Math.random() > 0.6 ? '#9B8B6B' : '#8B7B5B';
+                    ctx.fillRect(x, y, P, P);
+                }
+            }
+            drawGround('#8B7B55');
+
+            // Excavation trenches
+            pxRect(100, 298, 120, P * 4, '#6B5B3B');
+            pxRect(350, 296, 150, P * 5, '#6B5B3B');
+            pxRect(550, 298, 80, P * 4, '#6B5B3B');
+
+            // Foundation outlines (yellow markers)
+            pxRect(110, 298, 80, P, '#FFEE00');
+            pxRect(360, 296, 100, P, '#FFEE00');
+            pxRect(555, 298, 60, P, '#FFEE00');
+
+            // Cranes
+            drawCrane(200, 170);
+            drawCrane(480, 175);
+
+            // Truck moving
+            const truckX = (animFrame * 1.5) % 280 + 40;
+            pxRect(truckX, 326, 24, 8, '#DDAA22');
+            pxRect(truckX + 24, 330, 8, 4, '#555555');
+            pxRect(truckX - 4, 322, 12, 8, '#8B6914');
+
+            drawPeople(140, 320, 4);
+            drawPeople(420, 324, 3);
+
+            // Dust particles
+            for (let i = 0; i < 12; i++) {
+                const dx = 80 + Math.sin(animFrame * 0.02 + i * 0.8) * 200 + i * 40;
+                const dy = 285 + Math.sin(animFrame * 0.03 + i) * 8;
+                ctx.fillStyle = `rgba(180,160,120,${0.3 + Math.sin(animFrame * 0.04 + i) * 0.15})`;
+                ctx.fillRect(Math.round(dx / P) * P, Math.round(dy / P) * P, P, P);
+            }
+
+            // Former farmland elements (some leftover paddies)
+            pxRect(30, 340, 40, P * 2, '#7A9A5A');
+            pxRect(620, 345, 50, P * 2, '#7A9A5A');
+
+            drawClouds();
+        }
+
+        function drawPhase1() {
+            // 1961-1963: Construction, first residents, opening ceremony
+            drawSky('#A0D0F0', '#70A8D0');
+            drawHills();
+            drawGround('#6B8E5A');
+
+            // Buildings partially built with scaffolding everywhere
+            drawEstateBuildings(0.75, false, true, [0, 1, 2]);
+
+            // Cranes on top
+            drawCrane(130, 55);
+            drawCrane(380, 40);
+            drawCrane(580, 60);
+
+            // Road in front
+            pxRect(0, 338, W, P * 2, '#999988');
+
+            // School being built
+            pxRect(50, 360, 50, 30, '#C0B090');
+            pxRect(50, 356, 50, P * 2, '#AA6644');
+            // Scaffolding on school
+            for (let sy = 356; sy < 390; sy += P * 6) {
+                pxRect(48, sy, 54, P, 'rgba(180,150,80,0.7)');
+            }
+
+            // Market structure appearing
+            pxRect(620, 360, 60, 25, '#B0A080');
+            pxRect(620, 356, 60, P * 2, '#997755');
+
+            // First residents moving in (people with boxes)
+            drawPeople(200, 342, 5);
+            drawPeople(450, 345, 4);
+            
+            // Moving boxes
+            pxRect(180, 338, P * 2, P * 2, '#AA7733');
+            pxRect(500, 340, P * 2, P * 2, '#AA7733');
+
+            // Opening ceremony banner (Dec 1963)
+            pxRect(280, 310, 140, P * 3, '#DD2222');
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = '8px Courier New';
+            ctx.fillText('OPENING 1963', 290, 320);
+
+            drawClouds();
+        }
+
+        function drawPhase2() {
+            // 1964-1965: Fully completed, award
+            drawSky('#90C8F0', '#68A8D8');
+            drawHills();
+            drawGround('#6B8E5A');
+
+            drawEstateBuildings(1.0, true, false, []);
+
+            // Road
+            pxRect(0, 338, W, P * 2, '#AAAAAA');
+
+            // Court area (plain for now, not yet rainbow)
+            pxRect(260, 345, 180, 70, '#C8AA66');
+            pxRect(260 + 90 - P, 345, P, 70, '#FFFFFF');
+            pxRect(260, 345, 180, P, '#FFFFFF');
+            pxRect(260, 415 - P, 180, P, '#FFFFFF');
+
+            // Trees planted (young)
+            drawTree(240, 340, 4);
+            drawTree(460, 342, 3);
+
+            // People living normally
+            drawPeople(60, 348, 4);
+            drawPeople(480, 350, 5);
+            drawPeople(300, 365, 3);
+
+            // Award celebration — silver medal & fireworks
+            // Medal icon
+            pxRect(340, 88, P * 4, P * 4, '#C0C0C0');
+            pxRect(342, 82, P * 2, P * 2, '#E0D060');
+            ctx.fillStyle = '#FFD700';
+            ctx.font = 'bold 8px Courier New';
+            ctx.fillText('★ HKIA SILVER MEDAL 1965 ★', 270, 78);
+
+            // Fireworks
+            for (let i = 0; i < 4; i++) {
+                const fx = 120 + i * 150;
+                const fy = 35 + Math.sin(animFrame * 0.03 + i) * 15;
+                const colors = ['#FF2200', '#FFDD00', '#00FF88', '#FF00FF'];
+                if ((animFrame + i * 25) % 70 < 35) {
+                    for (let j = 0; j < 8; j++) {
+                        const angle = (j / 8) * Math.PI * 2;
+                        const dist = ((animFrame + i * 25) % 35) * 0.7;
+                        px(fx + Math.cos(angle) * dist, fy + Math.sin(angle) * dist, colors[i]);
+                    }
+                }
+            }
+
+            drawClouds();
+        }
+
+        function drawPhase3() {
+            // 1970s: Thriving community
+            drawSky('#88C0E8', '#60A0C8');
+            drawHills();
+            drawGround('#5A8A4A');
+
+            drawEstateBuildings(1.0, true, false, []);
+
+            pxRect(0, 338, W, P * 2, '#999999');
+            pxRect(0, 342, W, P, '#FFDD00');
+
+            // Basketball court (plain style — not rainbow yet in 70s)
+            pxRect(280, 350, 140, 55, '#C09050');
+            pxRect(280 + 70 - P, 350, P, 55, '#FFFFFF');
+            pxRect(280, 350, 140, P, '#FFFFFF');
+            pxRect(280, 405 - P, 140, P, '#FFFFFF');
+
+            // Schools
+            drawSchool(40, 360, 55, 30);
+            drawSchool(630, 360, 55, 30);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = '6px Courier New';
+            ctx.fillText('SCHOOL', 48, 382);
+            ctx.fillText('SCHOOL', 638, 382);
+
+            // Wet market stalls
+            drawMarketStall(140, 385);
+            drawMarketStall(180, 385);
+            drawMarketStall(520, 385);
+            drawMarketStall(560, 385);
+
+            // Trees growing
+            drawTree(230, 340, 5);
+            drawTree(450, 342, 5);
+            drawPalmTree(265, 340, 5);
+            drawPalmTree(420, 340, 5);
+
+            // Lots of people (thriving community)
+            drawPeople(60, 348, 5);
+            drawPeople(300, 368, 4);
+            drawPeople(480, 350, 4);
+            drawPeople(350, 410, 3);
+
+            drawClouds();
+        }
+
+        function drawPhase4() {
+            // 1980s: Mature greenery, iconic rainbow basketball court
+            drawSky('#80B8E0', '#58A0C8');
+            drawHills();
+            drawGround('#4A7A3A');
+
+            drawEstateBuildings(1.0, true, false, []);
+
+            pxRect(0, 338, W, P * 2, '#888888');
+
+            // THE ICONIC RAINBOW BASKETBALL COURT
+            drawChoiHungCourt(240, 345, 220, 75);
+
+            // Basketball bouncing
+            const ballX = 350 + Math.sin(animFrame * 0.07) * 30;
+            const ballY = 375 + Math.abs(Math.sin(animFrame * 0.14)) * -8;
+            pxRect(ballX, ballY, P * 2, P * 2, '#FF8800');
+
+            // Players
+            drawPeople(270, 385, 3);
+            drawPeople(380, 380, 3);
+
+            // Mature palm trees (like in photo)
+            drawPalmTree(232, 340, 7);
+            drawPalmTree(468, 342, 7);
+            drawPalmTree(500, 345, 6);
+            drawTree(30, 338, 7);
+            drawTree(680, 340, 7);
+
+            // Market
+            drawMarketStall(70, 395);
+            drawMarketStall(600, 395);
+
+            drawPeople(80, 355, 4);
+            drawPeople(540, 355, 3);
+
+            drawClouds();
+        }
+
+        function drawPhase5() {
+            // 1990s-2000s: Renovation with bamboo scaffolding
+            drawSky('#80B8E0', '#58A0C8');
+            drawHills();
+            drawGround('#4A7A3A');
+
+            drawEstateBuildings(1.0, true, true, [0, 2]);
+
+            pxRect(0, 338, W, P * 2, '#888888');
+
+            drawChoiHungCourt(240, 345, 220, 75);
+
+            // Palm trees
+            drawPalmTree(232, 340, 7);
+            drawPalmTree(468, 342, 7);
+            drawTree(30, 338, 7);
+            drawTree(680, 340, 7);
+
+            // Workers on scaffolding
+            drawPeople(30, 200, 2);
+            drawPeople(490, 190, 2);
+
+            // Paint buckets
+            pxRect(25, 210, P * 2, P * 2, '#FF5555');
+            pxRect(505, 200, P * 2, P * 2, '#55DD55');
+
+            // Normal life continues below
+            drawPeople(120, 355, 3);
+            drawPeople(500, 360, 4);
+            drawPeople(320, 395, 2);
+
+            // "Fresh Paint" sign
+            pxRect(560, 330, 50, 12, '#FFFFFF');
+            ctx.fillStyle = '#CC0000';
+            ctx.font = '7px Courier New';
+            ctx.fillText('REPAINT', 563, 339);
+
+            drawClouds();
+        }
+
+        function drawPhase6() {
+            // 2010s: Instagram famous
+            drawSky('#FF9966', '#FFD4A8'); // sunset tones for that golden hour photo
+            drawHills();
+            drawGround('#4A7A3A');
+
+            drawEstateBuildings(1.0, true, false, []);
+
+            pxRect(0, 338, W, P * 2, '#888888');
+
+            // THE famous court — highlighted
+            drawChoiHungCourt(240, 345, 220, 75);
+
+            // Glowing border (it's the star attraction)
+            const glow = Math.sin(animFrame * 0.05) * 0.3 + 0.7;
+            ctx.strokeStyle = `rgba(255,255,255,${glow})`;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(238, 343, 224, 79);
+
+            // TONS of tourists
+            drawCamera(200, 380);
+            drawCamera(175, 375);
+            drawPhone(210, 385);
+            drawPhone(480, 378);
+            drawPhone(500, 382);
+            drawCamera(490, 375);
+            drawPhone(520, 380);
+            drawPhone(155, 382);
+            drawCamera(540, 378);
+
+            // People posing on court
+            drawPeople(290, 388, 4);
+            drawPeople(370, 385, 3);
+
+            // Instagram hearts floating up
+            for (let i = 0; i < 3; i++) {
+                const heartPhase = (animFrame + i * 40) % 100;
+                if (heartPhase < 80) {
+                    const hx = 340 + i * 20 - 20;
+                    const hy = 330 - heartPhase * 0.8;
+                    const opacity = heartPhase < 60 ? 1 : (80 - heartPhase) / 20;
+                    ctx.globalAlpha = opacity;
+                    ctx.fillStyle = '#FF3366';
+                    // Simple pixel heart
+                    px(hx, hy + P, '#FF3366');
+                    px(hx - P, hy, '#FF3366');
+                    px(hx + P, hy, '#FF3366');
+                    px(hx - P * 2, hy + P, '#FF3366');
+                    px(hx + P * 2, hy + P, '#FF3366');
+                    px(hx - P, hy + P * 2, '#FF3366');
+                    px(hx + P, hy + P * 2, '#FF3366');
+                    ctx.globalAlpha = 1;
+                }
+            }
+
+            // Hashtag
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = 'bold 9px Courier New';
+            const tagBob = Math.sin(animFrame * 0.04) * 2;
+            ctx.fillText('#ChoiHungEstate', 300, 310 + tagBob);
+            ctx.fillText('#Rainbow', 320, 322 + tagBob);
+
+            // Palm trees
+            drawPalmTree(232, 340, 7);
+            drawPalmTree(468, 342, 7);
+            drawTree(30, 338, 7);
+            drawTree(680, 340, 7);
+
+            drawClouds();
+        }
+
+        function drawPhase7() {
+            // 2020s: Heritage, daily life, redevelopment announcement
+            drawSky('#90C8F0', '#68A8D8');
+            drawHills();
+            drawGround('#4A7A3A');
+
+            drawEstateBuildings(1.0, true, false, []);
+
+            pxRect(0, 338, W, P * 2, '#888888');
+
+            drawChoiHungCourt(240, 345, 220, 75);
+
+            // Heritage plaque
+            pxRect(55, 350, 60, 28, '#886622');
+            pxRect(58, 353, 54, 22, '#DDCC88');
+            ctx.fillStyle = '#442200';
+            ctx.font = 'bold 7px Courier New';
+            ctx.fillText('HERITAGE', 62, 363);
+            ctx.fillText('EST.1962', 62, 373);
+
+            // Old-school cafe
+            pxRect(600, 355, 45, 24, '#FFE8CC');
+            pxRect(600, 351, 45, P * 2, '#CC6644');
+            ctx.fillStyle = '#442200';
+            ctx.font = '6px Courier New';
+            ctx.fillText('茶餐廳', 605, 368);
+            ctx.fillText('CAFE', 610, 376);
+
+            // "2028 REDEVELOPMENT" sign
+            const signAlpha = Math.sin(animFrame * 0.03) * 0.2 + 0.8;
+            ctx.globalAlpha = signAlpha;
+            pxRect(280, 430, 140, 16, '#DD3333');
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = 'bold 8px Courier New';
+            ctx.fillText('REDEVELOPMENT 2028', 285, 442);
+            ctx.globalAlpha = 1;
+
+            // Mix of tourists and daily residents
+            drawPeople(130, 358, 3);
+            drawCamera(480, 378);
+            drawPhone(500, 380);
+            drawPeople(300, 395, 2);
+            drawPeople(550, 360, 3);
+
+            // Lots of hanging laundry (already in building function)
+
+            // Palm trees
+            drawPalmTree(232, 340, 8);
+            drawPalmTree(468, 342, 8);
+            drawPalmTree(500, 346, 6);
+            drawTree(30, 338, 8);
+            drawTree(680, 340, 8);
+            drawTree(710, 342, 6);
+
+            // Rainbow in sky
+            const rainbowColors = ['#FF0000', '#FF8800', '#FFFF00', '#00CC00', '#0066FF', '#6600AA'];
+            const rbPhase = animFrame % 350;
+            if (rbPhase < 250) {
+                const opacity = rbPhase < 50 ? rbPhase / 50 : rbPhase > 200 ? (250 - rbPhase) / 50 : 1;
+                ctx.globalAlpha = opacity * 0.45;
+                for (let i = 0; i < rainbowColors.length; i++) {
+                    const radius = 200 + i * 6;
+                    for (let angle = 0.1; angle < Math.PI - 0.1; angle += 0.02) {
+                        const rx = 375 + Math.cos(angle) * radius;
+                        const ry = 130 - Math.sin(angle) * radius * 0.35;
+                        if (ry > 0 && ry < 180 && rx > 0 && rx < W) {
+                            ctx.fillStyle = rainbowColors[i];
+                            ctx.fillRect(Math.round(rx / P) * P, Math.round(ry / P) * P, P, P);
+                        }
+                    }
+                }
+                ctx.globalAlpha = 1;
+            }
+
+            // "60+ Years" floating
+            ctx.fillStyle = '#FFD700';
+            ctx.font = 'bold 11px Courier New';
+            const textBob = Math.sin(animFrame * 0.03) * 3;
+            ctx.fillText('★ 60+ YEARS OF RAINBOW ★', 255, 22 + textBob);
+
+            drawClouds();
+        }
+
+        const drawFunctions = [drawPhase0, drawPhase1, drawPhase2, drawPhase3, drawPhase4, drawPhase5, drawPhase6, drawPhase7];
+
+        function drawTimeline() {
+            const tlY = H - 18;
+            pxRect(25, tlY, W - 50, P, '#444444');
+
+            phases.forEach((p, i) => {
+                const x = 25 + (i / (phases.length - 1)) * (W - 50);
+                const isActive = i === currentPhase;
+                ctx.fillStyle = isActive ? '#FFD700' : '#666666';
+                const sz = isActive ? P * 3 : P * 2;
+                ctx.fillRect(Math.round(x / P) * P - Math.floor(sz / 2), tlY - Math.floor(sz / 2), sz, sz);
+
+                // Year label
+                ctx.fillStyle = isActive ? '#FFD700' : '#555555';
+                ctx.font = isActive ? 'bold 7px Courier New' : '6px Courier New';
+                const label = p.year.split('–')[0].split('—')[0];
+                ctx.fillText(label, x - 10, tlY + 12);
+            });
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, W, H);
+
+            if (transitioning) {
+                const prevPhase = Math.max(0, currentPhase - 1);
+                if (transitionProgress < 0.5) {
+                    ctx.globalAlpha = 1 - transitionProgress * 2;
+                    drawFunctions[prevPhase]();
+                    ctx.globalAlpha = 1;
+                    // Black overlay
+                    ctx.fillStyle = `rgba(0,0,0,${transitionProgress * 2})`;
+                    ctx.fillRect(0, 0, W, H);
+                } else {
+                    ctx.globalAlpha = (transitionProgress - 0.5) * 2;
+                    drawFunctions[currentPhase]();
+                    ctx.globalAlpha = 1;
+                }
+
+                transitionProgress += 0.018;
+                if (transitionProgress >= 1) {
+                    transitioning = false;
+                    transitionProgress = 0;
+                }
+            } else {
+                drawFunctions[currentPhase]();
+            }
+
+            drawTimeline();
+
+            animFrame++;
+            requestAnimationFrame(draw);
+        }
+
+        function goToPhase(phase) {
+            if (phase >= 0 && phase < phases.length && phase !== currentPhase) {
+                currentPhase = phase;
+                transitioning = true;
+                transitionProgress = 0;
+                updateUI();
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('yearDisplay').textContent = `${phases[currentPhase].year} — ${phases[currentPhase].title}`;
+            document.getElementById('description').textContent = phases[currentPhase].desc;
+        }
+
+        document.getElementById('prevBtn').addEventListener('click', () => goToPhase(currentPhase - 1));
+        document.getElementById('nextBtn').addEventListener('click', () => goToPhase(currentPhase + 1));
+
+        document.getElementById('autoBtn').addEventListener('click', () => {
+            autoPlay = !autoPlay;
+            document.getElementById('autoBtn').textContent = autoPlay ? '⏸ Pause' : '▶ Auto Play';
+            if (autoPlay) {
+                autoTimer = setInterval(() => {
+                    goToPhase(currentPhase < phases.length - 1 ? currentPhase + 1 : 0);
+                }, 5000);
+            } else {
+                clearInterval(autoTimer);
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') goToPhase(currentPhase - 1);
+            if (e.key === 'ArrowRight') goToPhase(currentPhase + 1);
+            if (e.key === ' ') {
+                e.preventDefault();
+                document.getElementById('autoBtn').click();
+            }
+        });
+
+        updateUI();
+        draw();
+    </script>
+</body>
+</html>
+
+							<script>
+                            	
+							</script>
+                        </body>
+                        </html>
+                    
